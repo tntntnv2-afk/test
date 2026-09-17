@@ -3095,84 +3095,112 @@ function Cosmetics.After:Set(on)
 	end)
 end
 
-Cosmetics.Dissolve = { Colour = Color3.fromRGB(255, 60, 60), _busy = false }
+Cosmetics.Dissolve = { Colour = Color3.fromRGB(255, 60, 60), _busy = false, Library = nil }
 
-function Cosmetics.Dissolve:_shell(ch, hideReal)
-	local folder = Cosmetics:_folderRef()
+-- build a shell of anchored clones that copy the live character's pose each frame
+function Cosmetics.Dissolve:_buildShell()
+	local ch = LocalPlayer.Character
+	local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
+	if not (ch and hrp) then return nil end
 	local model = Instance.new("Model")
 	model.Name = "_dissolve"
-	local parts, minY, maxY = {}, math.huge, -math.huge
+	local slots = {}
+	local minLocalY, maxLocalY = math.huge, -math.huge
 	for _, d in ipairs(ch:GetDescendants()) do
 		if d:IsA("BasePart") and d.Transparency < 1 then
 			local clone
-			if d:IsA("MeshPart") then clone = d:Clone() for _, c in ipairs(clone:GetChildren()) do c:Destroy() end clone.TextureID = ""
-			else clone = d:Clone() for _, c in ipairs(clone:GetChildren()) do if not c:IsA("SpecialMesh") then c:Destroy() else c.TextureId = "" end end end
+			if d:IsA("MeshPart") then
+				clone = d:Clone()
+				for _, c in ipairs(clone:GetChildren()) do c:Destroy() end
+				clone.TextureID = ""
+			else
+				clone = d:Clone()
+				for _, c in ipairs(clone:GetChildren()) do
+					if not c:IsA("SpecialMesh") then c:Destroy() else c.TextureId = "" end
+				end
+			end
 			clone.Anchored = true clone.CanCollide = false clone.CanQuery = false clone.CastShadow = false clone.Massless = true
+			clone.Material = Enum.Material.Neon
+			clone.Transparency = 1
 			clone.Parent = model
-			parts[#parts + 1] = clone
-			minY = math.min(minY, d.Position.Y - d.Size.Y * 0.5)
-			maxY = math.max(maxY, d.Position.Y + d.Size.Y * 0.5)
-			if hideReal then d.LocalTransparencyModifier = 1 end
+			local relY = (hrp.CFrame:ToObjectSpace(d.CFrame)).Position.Y
+			minLocalY = math.min(minLocalY, relY - d.Size.Y * 0.5)
+			maxLocalY = math.max(maxLocalY, relY + d.Size.Y * 0.5)
+			slots[#slots + 1] = { clone = clone, src = d }
 		end
 	end
-	model.Parent = folder
-	return model, parts, minY, maxY
+	model.Parent = Cosmetics:_folderRef()
+	return { model = model, slots = slots, minY = minLocalY, maxY = maxLocalY }
 end
 
-function Cosmetics.Dissolve:_emitter(cf, colour)
-	local a = Instance.new("Attachment")
-	a.CFrame = cf
-	a.Parent = Cosmetics:_folderRef():FindFirstChild("_dissolveRoot") or (function()
-		local p = Instance.new("Part") p.Name = "_dissolveRoot" p.Anchored = true p.Transparency = 1 p.CanCollide = false p.CanQuery = false p.Size = Vector3.new(0.1,0.1,0.1) p.Parent = Cosmetics:_folderRef() return p
-	end)()
+function Cosmetics.Dissolve:_emitter()
+	local root = Instance.new("Part")
+	root.Name = "_dissolveRoot" root.Anchored = true root.Transparency = 1 root.CanCollide = false root.CanQuery = false root.Size = Vector3.new(0.2, 0.2, 0.2)
+	root.Parent = Cosmetics:_folderRef()
+	local a = Instance.new("Attachment") a.Parent = root
 	local e = Instance.new("ParticleEmitter")
 	e.Texture = "rbxassetid://243660364"
-	e.Color = ColorSequence.new(colour)
 	e.LightEmission = 1
-	e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.5), NumberSequenceKeypoint.new(1, 0) })
-	e.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(1, 1) })
-	e.Lifetime = NumberRange.new(0.4, 0.8)
-	e.Speed = NumberRange.new(3, 6)
-	e.SpreadAngle = Vector2.new(20, 20)
-	e.Acceleration = Vector3.new(0, 6, 0)
+	e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.6), NumberSequenceKeypoint.new(1, 0) })
+	e.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.1), NumberSequenceKeypoint.new(1, 1) })
+	e.Lifetime = NumberRange.new(0.35, 0.7)
+	e.Speed = NumberRange.new(2, 5)
+	e.SpreadAngle = Vector2.new(180, 180)
+	e.Acceleration = Vector3.new(0, 5, 0)
 	e.Rate = 0
 	e.Parent = a
-	return a, e
+	return root, a, e
 end
 
-function Cosmetics.Dissolve:Play(dir, dur)
+-- dir "out": body dissolves bottom->top into particles.  "in": body reforms top->bottom.
+-- onMidpoint runs once at t≈0 (before the wipe) so a teleport can move the root while the body is invisible.
+function Cosmetics.Dissolve:Play(dir, dur, onDone)
 	local ch = LocalPlayer.Character
 	local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
-	if not (ch and hrp) then return end
-	dur = dur or 0.35
+	if not (ch and hrp) then if onDone then onDone() end return end
+	dur = dur or 0.4
 	local colour = Cosmetics.Rainbow and Color3.fromHSV((os.clock() * 0.15) % 1, 0.85, 1) or self.Colour
-	local model, parts, minY, maxY = self:_shell(ch, dir == "out")
-	local span = math.max(maxY - minY, 0.1)
-	local att, em = self:_emitter(hrp.CFrame, colour)
-	em.Rate = 220
+	local shell = self:_buildShell()
+	if not shell then if onDone then onDone() end return end
+	local root, att, em = self:_emitter()
+	em.Color = ColorSequence.new(colour)
+	-- hide the REAL body for the whole effect; the shell stands in
+	for _, s in ipairs(shell.slots) do s.src.LocalTransparencyModifier = 1 end
+
 	task.spawn(function()
 		local t0 = os.clock()
+		local span = math.max(shell.maxY - shell.minY, 0.1)
+		em.Rate = 260
 		while os.clock() - t0 < dur do
 			local t = (os.clock() - t0) / dur
-			local cut = dir == "out" and (minY + span * t) or (maxY - span * t)
-			for _, p in ipairs(parts) do
-				local edge = p.Position.Y - p.Size.Y * 0.5
-				local vis
-				if dir == "out" then vis = edge > cut else vis = edge < cut end
-				p.Transparency = vis and 0 or 1
-				if not vis then p.Material = Enum.Material.Neon p.Color = colour end
+			if dir == "in" then t = 1 - t end          -- reform runs the wipe backwards
+			local cut = shell.minY + span * t          -- local-space height of the dissolve line
+			local worldCutY = nil
+			for _, s in ipairs(shell.slots) do
+				if s.src.Parent then
+					s.clone.CFrame = s.src.CFrame        -- follow the live body every frame
+					local relY = (hrp.CFrame:ToObjectSpace(s.src.CFrame)).Position.Y
+					local visible = relY > cut           -- above the line = still solid
+					s.clone.Transparency = visible and 0 or 1
+					s.clone.Color = colour
+				end
 			end
-			att.WorldCFrame = CFrame.new(hrp.Position.X, cut, hrp.Position.Z)
+			-- emit along the dissolve line in world space
+			local lineWorld = (hrp.CFrame * CFrame.new(0, cut, 0)).Position
+			att.WorldCFrame = CFrame.new(lineWorld)
 			task.wait()
 		end
-		em.Rate = 0
-		task.wait(0.6)
-		pcall(function() model:Destroy() end)
-		local root = Cosmetics:_folderRef():FindFirstChild("_dissolveRoot")
-		if root then pcall(function() root:Destroy() end) end
+		-- settle: fully gone (out) or fully solid (in)
+		for _, s in ipairs(shell.slots) do s.clone.Transparency = (dir == "out") and 1 or 0 end
 		if dir == "in" then
-			for _, d in ipairs(ch:GetDescendants()) do if d:IsA("BasePart") then d.LocalTransparencyModifier = 0 end end
+			-- reveal the real body, remove the shell
+			for _, s in ipairs(shell.slots) do if s.src.Parent then s.src.LocalTransparencyModifier = 0 end end
 		end
+		em.Rate = 0
+		if onDone then onDone() end
+		task.wait(0.7)
+		pcall(function() shell.model:Destroy() end)
+		pcall(function() root:Destroy() end)
 	end)
 end
 
@@ -3181,18 +3209,20 @@ function Cosmetics.Dissolve:Teleport(targetCFrame)
 	local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
 	if not (ch and hrp) or self._busy then return end
 	self._busy = true
-	task.spawn(function()
-		self:Play("out", 0.3)
-		task.wait(0.32)
-		for _, d in ipairs(ch:GetDescendants()) do if d:IsA("BasePart") then d.LocalTransparencyModifier = 1 end end
-		pcall(function() hrp.CFrame = targetCFrame end)
-		task.wait(0.05)
-		self:Play("in", 0.3)
-		task.wait(0.35)
-		self._busy = false
+	-- 1) dissolve out where we stand
+	self:Play("out", 0.32, function()
+		-- 2) body is now fully invisible; move to the target (hold briefly for replication)
+		local hold = os.clock() + 0.18
+		task.spawn(function()
+			while os.clock() < hold do
+				pcall(function() hrp.CFrame = targetCFrame hrp.AssemblyLinearVelocity = Vector3.zero end)
+				RunService.RenderStepped:Wait()
+			end
+			-- 3) reform at the destination
+			self:Play("in", 0.32, function() self._busy = false end)
+		end)
 	end)
 end
-Cosmetics.Dissolve.Library = nil
 function Cosmetics:BuildTab(tab)
 	local Library = self.Library
 	local left = tab:AddLeftGroupbox("Cosmetics")
@@ -3232,8 +3262,10 @@ function Cosmetics:BuildTab(tab)
 	local dz = tab:AddRightGroupbox("Dissolve")
 	dz:AddColorPicker("Cosm_Diss_Colour", { Text = "dissolve colour", Default = Cosmetics.Dissolve.Colour, Callback = function(c) Cosmetics.Dissolve.Colour = c end })
 	dz:AddButton({ Text = "dissolve out & back", Func = function()
-		Cosmetics.Dissolve:Play("out", 0.35)
-		task.delay(0.5, function() Cosmetics.Dissolve:Play("in", 0.35) end)
+		Cosmetics.Dissolve:Play("out", 0.35, function()
+			task.wait(0.15)
+			Cosmetics.Dissolve:Play("in", 0.35)
+		end)
 	end })
 	dz:AddLabel("in a script, call Cosmetics.Dissolve:Teleport(cframe) to warp with the shader on both ends.", true)
 
