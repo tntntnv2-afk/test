@@ -3097,7 +3097,7 @@ end
 
 Cosmetics.Dissolve = { Colour = Color3.fromRGB(255, 60, 60), _busy = false, Library = nil }
 
--- build a shell of anchored clones that copy the live character's pose each frame
+-- shell of clones that copy the live pose; each clone fades smoothly and rises apart as it dissolves
 function Cosmetics.Dissolve:_buildShell()
 	local ch = LocalPlayer.Character
 	local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
@@ -3105,7 +3105,7 @@ function Cosmetics.Dissolve:_buildShell()
 	local model = Instance.new("Model")
 	model.Name = "_dissolve"
 	local slots = {}
-	local minLocalY, maxLocalY = math.huge, -math.huge
+	local minY, maxY = math.huge, -math.huge
 	for _, d in ipairs(ch:GetDescendants()) do
 		if d:IsA("BasePart") and d.Transparency < 1 then
 			local clone
@@ -3120,87 +3120,121 @@ function Cosmetics.Dissolve:_buildShell()
 				end
 			end
 			clone.Anchored = true clone.CanCollide = false clone.CanQuery = false clone.CastShadow = false clone.Massless = true
-			clone.Material = Enum.Material.Neon
 			clone.Transparency = 1
 			clone.Parent = model
 			local relY = (hrp.CFrame:ToObjectSpace(d.CFrame)).Position.Y
-			minLocalY = math.min(minLocalY, relY - d.Size.Y * 0.5)
-			maxLocalY = math.max(maxLocalY, relY + d.Size.Y * 0.5)
-			slots[#slots + 1] = { clone = clone, src = d }
+			minY = math.min(minY, relY)
+			maxY = math.max(maxY, relY)
+			slots[#slots + 1] = { clone = clone, src = d, relY = relY }
 		end
 	end
 	model.Parent = Cosmetics:_folderRef()
-	return { model = model, slots = slots, minY = minLocalY, maxY = maxLocalY }
+	return { model = model, slots = slots, minY = minY - 1.2, maxY = maxY + 1.2 }
 end
 
-function Cosmetics.Dissolve:_emitter()
+function Cosmetics.Dissolve:_burst(worldPos, colour, big)
 	local root = Instance.new("Part")
-	root.Name = "_dissolveRoot" root.Anchored = true root.Transparency = 1 root.CanCollide = false root.CanQuery = false root.Size = Vector3.new(0.2, 0.2, 0.2)
-	root.Parent = Cosmetics:_folderRef()
+	root.Name = "_dissolveFx" root.Anchored = true root.Transparency = 1 root.CanCollide = false root.CanQuery = false root.Size = Vector3.new(0.2, 0.2, 0.2)
+	root.CFrame = CFrame.new(worldPos) root.Parent = Cosmetics:_folderRef()
 	local a = Instance.new("Attachment") a.Parent = root
+
+	-- rising embers
 	local e = Instance.new("ParticleEmitter")
 	e.Texture = "rbxassetid://243660364"
+	e.Color = ColorSequence.new(colour)
 	e.LightEmission = 1
-	e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.6), NumberSequenceKeypoint.new(1, 0) })
-	e.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.1), NumberSequenceKeypoint.new(1, 1) })
-	e.Lifetime = NumberRange.new(0.35, 0.7)
-	e.Speed = NumberRange.new(2, 5)
-	e.SpreadAngle = Vector2.new(180, 180)
-	e.Acceleration = Vector3.new(0, 5, 0)
-	e.Rate = 0
+	e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, big and 1.0 or 0.7), NumberSequenceKeypoint.new(1, 0) })
+	e.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.1), NumberSequenceKeypoint.new(0.7, 0.3), NumberSequenceKeypoint.new(1, 1) })
+	e.Lifetime = NumberRange.new(0.5, 1.0)
+	e.Speed = NumberRange.new(4, 9)
+	e.SpreadAngle = Vector2.new(35, 35)
+	e.Acceleration = Vector3.new(0, 10, 0)
+	e.Drag = 2
+	e.Rotation = NumberRange.new(0, 360)
 	e.Parent = a
-	return root, a, e
+
+	-- fast sparkles
+	local sp = Instance.new("ParticleEmitter")
+	sp.Texture = "rbxassetid://6015897843"
+	sp.Color = ColorSequence.new(colour, Color3.new(1, 1, 1))
+	sp.LightEmission = 1
+	sp.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.35), NumberSequenceKeypoint.new(1, 0) })
+	sp.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 1) })
+	sp.Lifetime = NumberRange.new(0.3, 0.6)
+	sp.Speed = NumberRange.new(6, 14)
+	sp.SpreadAngle = Vector2.new(180, 180)
+	sp.Acceleration = Vector3.new(0, -8, 0)
+	sp.Parent = a
+
+	return root, a, e, sp
 end
 
--- dir "out": body dissolves bottom->top into particles.  "in": body reforms top->bottom.
--- onMidpoint runs once at t≈0 (before the wipe) so a teleport can move the root while the body is invisible.
+-- a bright expanding ring on the floor + a light flash at the moment of teleport
+function Cosmetics.Dissolve:_shock(worldPos, colour)
+	local f = Cosmetics:_folderRef()
+	local ring = part({ Name = "_dissolveRing", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.1, 1, 1), Material = Enum.Material.Neon, Color = colour, Transparency = 0.1, CFrame = CFrame.new(worldPos) * CFrame.Angles(0, 0, math.rad(90)), Parent = f })
+	local light = Instance.new("PointLight")
+	light.Color = colour light.Brightness = 8 light.Range = 18 light.Parent = ring
+	task.spawn(function()
+		local t0 = os.clock()
+		while os.clock() - t0 < 0.5 do
+			local t = (os.clock() - t0) / 0.5
+			local s = 2 + 10 * t
+			ring.Size = Vector3.new(0.1, s, s)
+			ring.Transparency = 0.1 + 0.9 * t
+			light.Brightness = 8 * (1 - t)
+			task.wait()
+		end
+		pcall(function() ring:Destroy() end)
+	end)
+end
+
 function Cosmetics.Dissolve:Play(dir, dur, onDone)
 	local ch = LocalPlayer.Character
 	local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
 	if not (ch and hrp) then if onDone then onDone() end return end
-	dur = dur or 0.4
+	dur = dur or 0.45
 	local colour = Cosmetics.Rainbow and Color3.fromHSV((os.clock() * 0.15) % 1, 0.85, 1) or self.Colour
 	local shell = self:_buildShell()
 	if not shell then if onDone then onDone() end return end
-	local root, att, em = self:_emitter()
-	em.Color = ColorSequence.new(colour)
-	-- hide the REAL body for the whole effect; the shell stands in
+	local fxRoot, att, embers, sparks = self:_burst(hrp.Position, colour, false)
 	for _, s in ipairs(shell.slots) do s.src.LocalTransparencyModifier = 1 end
 
+	local BAND = 1.6   -- height of the soft dissolve band, so parts fade rather than pop
 	task.spawn(function()
 		local t0 = os.clock()
 		local span = math.max(shell.maxY - shell.minY, 0.1)
-		em.Rate = 260
+		embers.Rate = 90 sparks.Rate = 60
 		while os.clock() - t0 < dur do
-			local t = (os.clock() - t0) / dur
-			if dir == "in" then t = 1 - t end          -- reform runs the wipe backwards
-			local cut = shell.minY + span * t          -- local-space height of the dissolve line
-			local worldCutY = nil
+			local raw = (os.clock() - t0) / dur
+			local t = dir == "in" and (1 - raw) or raw
+			local cut = shell.minY + span * t
 			for _, s in ipairs(shell.slots) do
 				if s.src.Parent then
-					s.clone.CFrame = s.src.CFrame        -- follow the live body every frame
-					local relY = (hrp.CFrame:ToObjectSpace(s.src.CFrame)).Position.Y
-					local visible = relY > cut           -- above the line = still solid
-					s.clone.Transparency = visible and 0 or 1
-					s.clone.Color = colour
+					-- follow live pose; as the band passes a part, it lifts and fades
+					local above = s.relY - cut
+					local frac = math.clamp(above / BAND + 0.5, 0, 1)   -- 1 solid, 0 gone
+					local lift = (1 - frac) * 1.2
+					s.clone.CFrame = s.src.CFrame + Vector3.new(0, dir == "out" and lift or -lift * (1 - frac), 0)
+					s.clone.Transparency = 1 - frac
+					if frac < 0.98 then
+						s.clone.Material = Enum.Material.Neon
+						s.clone.Color = colour:Lerp(Color3.new(1, 1, 1), (1 - frac) * 0.4)
+					end
 				end
 			end
-			-- emit along the dissolve line in world space
-			local lineWorld = (hrp.CFrame * CFrame.new(0, cut, 0)).Position
-			att.WorldCFrame = CFrame.new(lineWorld)
+			att.WorldCFrame = CFrame.new((hrp.CFrame * CFrame.new(0, cut, 0)).Position)
 			task.wait()
 		end
-		-- settle: fully gone (out) or fully solid (in)
 		for _, s in ipairs(shell.slots) do s.clone.Transparency = (dir == "out") and 1 or 0 end
 		if dir == "in" then
-			-- reveal the real body, remove the shell
 			for _, s in ipairs(shell.slots) do if s.src.Parent then s.src.LocalTransparencyModifier = 0 end end
 		end
-		em.Rate = 0
+		embers.Rate = 0 sparks.Rate = 0
 		if onDone then onDone() end
-		task.wait(0.7)
+		task.wait(1.0)
 		pcall(function() shell.model:Destroy() end)
-		pcall(function() root:Destroy() end)
+		pcall(function() fxRoot:Destroy() end)
 	end)
 end
 
@@ -3209,17 +3243,17 @@ function Cosmetics.Dissolve:Teleport(targetCFrame)
 	local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
 	if not (ch and hrp) or self._busy then return end
 	self._busy = true
-	-- 1) dissolve out where we stand
-	self:Play("out", 0.32, function()
-		-- 2) body is now fully invisible; move to the target (hold briefly for replication)
+	local colour = Cosmetics.Rainbow and Color3.fromHSV((os.clock() * 0.15) % 1, 0.85, 1) or self.Colour
+	self:_shock(hrp.Position, colour)
+	self:Play("out", 0.38, function()
 		local hold = os.clock() + 0.18
 		task.spawn(function()
 			while os.clock() < hold do
 				pcall(function() hrp.CFrame = targetCFrame hrp.AssemblyLinearVelocity = Vector3.zero end)
 				RunService.RenderStepped:Wait()
 			end
-			-- 3) reform at the destination
-			self:Play("in", 0.32, function() self._busy = false end)
+			self:_shock(targetCFrame.Position, colour)
+			self:Play("in", 0.38, function() self._busy = false end)
 		end)
 	end)
 end
