@@ -612,21 +612,21 @@ function Library:CreateWindow(cfg)
 	end)
 
 	-- ------------------------------------------------------------ top bar
-	local HEAD, STRIP, FOOT = 50, 38, 28
+	local HEAD, STRIP, FOOT = 50, 34, 28
 	local VISIBLE_TABS, TAB_PAD = 4, 6
 	local head = Create("Frame", { Size = UDim2.new(1, 0, 0, HEAD), BackgroundTransparency = 1, ZIndex = 12, Parent = main })
 	Draggable(head, main)
-	local plate = Create("Frame", { Size = UDim2.fromOffset(30, 30), Position = UDim2.new(0, 16, 0, 10), BackgroundColor3 = Color3.new(0, 0, 0), ZIndex = 13, Parent = head })
+	local plate = Create("Frame", { Size = UDim2.fromOffset(30, 30), Position = UDim2.new(0, 20, 0, 10), BackgroundColor3 = Color3.new(0, 0, 0), ZIndex = 13, Parent = head })
 	Corner(plate, 9)
 	local halo = Create("UIStroke", { Thickness = 1, Transparency = 0.55, Parent = plate })
 	self:AddToRegistry(halo, { Color = "Accent" })
 	Create("UIGradient", { Rotation = 90, Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 0.9) }), Parent = halo })
 	Create("ImageLabel", { AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(18, 18), Position = UDim2.new(0.5, 0, 0.5, 0), BackgroundTransparency = 1, Image = cfg.Icon and ("rbxassetid://" .. tostring(cfg.Icon)) or Library.Icon, ZIndex = 14, Parent = plate })
-	local brandName = Text(head, string.lower(cfg.Title or "dexori"), 14, true); brandName.Position = UDim2.new(0, 56, 0, 10); brandName.Size = UDim2.new(0.4, -56, 0, 16); brandName.ZIndex = 13
-	local brandSub = Text(head, cfg.Subtitle or "", 10, false, "FontDim"); brandSub.Position = UDim2.new(0, 56, 0, 27); brandSub.Size = UDim2.new(0.4, -56, 0, 12); brandSub.ZIndex = 13
+	local brandName = Text(head, string.lower(cfg.Title or "dexori"), 14, true); brandName.Position = UDim2.new(0, 60, 0, 10); brandName.Size = UDim2.new(0.4, -60, 0, 16); brandName.ZIndex = 13
+	local brandSub = Text(head, cfg.Subtitle or "", 10, false, "FontDim"); brandSub.Position = UDim2.new(0, 60, 0, 27); brandSub.Size = UDim2.new(0.4, -60, 0, 12); brandSub.ZIndex = 13
 
 	-- close
-	local closeBtn = Create("TextButton", { Size = UDim2.fromOffset(26, 26), Position = UDim2.new(1, -40, 0, 12), Text = "", AutoButtonColor = false, BackgroundTransparency = 1, ZIndex = 14, Parent = head })
+	local closeBtn = Create("TextButton", { Size = UDim2.fromOffset(26, 26), Position = UDim2.new(1, -46, 0, 12), Text = "", AutoButtonColor = false, BackgroundTransparency = 1, ZIndex = 14, Parent = head })
 	Corner(closeBtn, 9)
 	do
 		local a = Create("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(12, 1.5), Position = UDim2.new(0.5, 0, 0.5, 0), Rotation = 45, BorderSizePixel = 0, ZIndex = 15, Parent = closeBtn })
@@ -638,7 +638,7 @@ function Library:CreateWindow(cfg)
 	closeBtn.MouseButton1Click:Connect(function() Library:Confirm("unload " .. (cfg.Title or "the menu") .. "?", "this closes the menu for this session. you'll need to run the script again.", function() Library:Unload() end) end)
 
 	-- search
-	local searchBox = Create("Frame", { Size = UDim2.new(0, 190, 0, 28), Position = UDim2.new(1, -240, 0, 11), BackgroundTransparency = 1, ZIndex = 13, Parent = head })
+	local searchBox = Create("Frame", { Size = UDim2.new(0, 190, 0, 28), Position = UDim2.new(1, -250, 0, 11), BackgroundTransparency = 1, ZIndex = 13, Parent = head })
 	Corner(searchBox, 10)
 	local searchEdge = Stroke(searchBox, "Outline")
 	local sIcon = SearchIcon(searchBox, 13, "FontDim"); sIcon.Position = UDim2.new(0, 11, 0.5, -7); sIcon.ZIndex = 14
@@ -682,29 +682,30 @@ function Library:CreateWindow(cfg)
 	end)
 
 	-- ------------------------------------------------------------ tab strip (4 visible, scroll for the rest)
-	local strip = Create("Frame", { Size = UDim2.new(1, -24, 0, STRIP), Position = UDim2.new(0, 12, 0, HEAD), BackgroundTransparency = 0.35, ZIndex = 12, Parent = main })
+	local strip = Create("Frame", { Size = UDim2.new(1, -40, 0, STRIP), Position = UDim2.new(0, 20, 0, HEAD), BackgroundTransparency = 0.35, ZIndex = 12, Parent = main })
 	self:AddToRegistry(strip, { BackgroundColor3 = "Main" }); Corner(strip, 11)
 	local stripEdge = Create("UIStroke", { Thickness = 1, Transparency = 0.35, Parent = strip })
 	self:AddToRegistry(stripEdge, { Color = "Outline" })
 	local function arrowBtn(xs, xo, rot)
-		local b = Create("TextButton", { AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.fromOffset(24, 26), Position = UDim2.new(xs, xo, 0.5, 0), Text = "", AutoButtonColor = false, BackgroundTransparency = 1, ZIndex = 14, Parent = strip })
-		Corner(b, 8); self:AddToRegistry(b, { BackgroundColor3 = "Element" })
+		local b = Create("TextButton", { AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.fromOffset(24, 24), Position = UDim2.new(xs, xo, 0.5, 0), Text = "", AutoButtonColor = false, BackgroundColor3 = Color3.fromRGB(255, 255, 255), BackgroundTransparency = 1, ZIndex = 14, Parent = strip })
+		Corner(b, 7)
 		local ch = Chevron(b, 12, "FontDim"); ch.AnchorPoint = Vector2.new(0.5, 0.5); ch.Position = UDim2.new(0.5, 0, 0.5, 0); ch.Rotation = rot; ch.ZIndex = 15
-		b.MouseEnter:Connect(function() Tween(b, { BackgroundTransparency = 0 }, 0.1) end)
+		b.MouseEnter:Connect(function() if b.Active then Tween(b, { BackgroundTransparency = 0.94 }, 0.1) end end)
 		b.MouseLeave:Connect(function() Tween(b, { BackgroundTransparency = 1 }, 0.14) end)
 		return b, ch
 	end
 	local leftBtn, leftCh = arrowBtn(0, 5, 90)
 	local rightBtn, rightCh = arrowBtn(1, -29, -90)
-	local tabView = Create("ScrollingFrame", { Size = UDim2.new(1, -68, 1, -8), Position = UDim2.new(0, 34, 0, 4), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 0, ScrollingDirection = Enum.ScrollingDirection.X, AutomaticCanvasSize = Enum.AutomaticSize.X, CanvasSize = UDim2.new(), ElasticBehavior = Enum.ElasticBehavior.Never, ClipsDescendants = true, ZIndex = 13, Parent = strip })
+	local tabView = Create("ScrollingFrame", { Size = UDim2.new(1, -66, 1, -8), Position = UDim2.new(0, 33, 0, 4), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 0, ScrollingDirection = Enum.ScrollingDirection.X, AutomaticCanvasSize = Enum.AutomaticSize.X, CanvasSize = UDim2.new(), ElasticBehavior = Enum.ElasticBehavior.Never, ClipsDescendants = true, ZIndex = 13, Parent = strip })
 	Create("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, TAB_PAD), VerticalAlignment = Enum.VerticalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder, Parent = tabView })
 	local tabW = 100
 	local function maxScroll() return math.max(0, tabView.AbsoluteCanvasSize.X - tabView.AbsoluteSize.X) end
 	local function refreshArrows()
 		local x, mx = tabView.CanvasPosition.X, maxScroll()
-		leftCh.Visible = x > 1
-		rightCh.Visible = x < mx - 1
-		leftBtn.Active, rightBtn.Active = x > 1, x < mx - 1
+		local canL, canR = x > 1, x < mx - 1
+		for _, c in ipairs(leftCh:GetChildren()) do c.BackgroundTransparency = canL and 0 or 0.75 end
+		for _, c in ipairs(rightCh:GetChildren()) do c.BackgroundTransparency = canR and 0 or 0.75 end
+		leftBtn.Active, rightBtn.Active = canL, canR
 	end
 	local function scrollTo(x)
 		x = math.clamp(x, 0, maxScroll())
@@ -742,7 +743,7 @@ function Library:CreateWindow(cfg)
 
 	local footer = Create("Frame", { Size = UDim2.new(1, 0, 0, FOOT), Position = UDim2.new(0, 0, 1, -FOOT), BackgroundTransparency = 1, ZIndex = 12, Parent = main })
 	-- rebindable menu key chip
-	local hintBtn = Create("TextButton", { AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.fromOffset(92, 18), Position = UDim2.new(0, 18, 0.5, -2), Text = "", AutoButtonColor = false, Active = true, ZIndex = 30, Parent = footer })
+	local hintBtn = Create("TextButton", { AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.fromOffset(84, 18), Position = UDim2.new(0, 20, 0.5, -2), Text = "", AutoButtonColor = false, Active = true, ZIndex = 30, Parent = footer })
 	Corner(hintBtn, 6); self:AddToRegistry(hintBtn, { BackgroundColor3 = "Element" }); Stroke(hintBtn, "Outline")
 	local hint = Text(hintBtn, "", 9, true, "FontDim"); hint.TextXAlignment = Enum.TextXAlignment.Center; hint.Size = UDim2.new(1, 0, 1, 0); hint.ZIndex = 31
 	local rebinding = false
@@ -761,7 +762,7 @@ function Library:CreateWindow(cfg)
 			hint.TextColor3 = Library.Theme.FontDim
 		end
 	end))
-	local footL = Text(footer, cfg.Footer or "", 10, false, "FontDim"); footL.Position = UDim2.new(0, 120, 0, -2); footL.Size = UDim2.new(0.45, -120, 1, 0); footL.ZIndex = 13
+	local footL = Text(footer, cfg.Footer or "", 10, false, "FontDim"); footL.Position = UDim2.new(0, 114, 0, -2); footL.Size = UDim2.new(0.45, -114, 1, 0); footL.ZIndex = 13
 	-- live readout with a tiny fps sparkline
 	local spark = Create("Frame", { AnchorPoint = Vector2.new(1, 0.5), Size = UDim2.fromOffset(52, 12), Position = UDim2.new(1, -24, 0.5, -2), BackgroundTransparency = 1, ZIndex = 13, Parent = footer })
 	local bars = {}
@@ -846,8 +847,8 @@ function Library:CreateWindow(cfg)
 	function window:AddTab(name, icon)
 		order = order + 1
 		local tab = { Name = name, Subtabs = {} }
-		local btn = Create("TextButton", { Size = UDim2.new(0, tabW, 1, 0), Text = "", AutoButtonColor = false, BackgroundTransparency = 1, LayoutOrder = order, ZIndex = 14, Parent = tabView })
-		Corner(btn, 8); Library:AddToRegistry(btn, { BackgroundColor3 = "Element" })
+		local btn = Create("TextButton", { Size = UDim2.new(0, tabW, 1, 0), Text = "", AutoButtonColor = false, BackgroundColor3 = Color3.fromRGB(255, 255, 255), BackgroundTransparency = 1, LayoutOrder = order, ZIndex = 14, Parent = tabView })
+		Corner(btn, 7)
 		local glyph
 		local useIcon = cfg.UseIcons == true and icon ~= nil
 		if useIcon then
@@ -861,13 +862,13 @@ function Library:CreateWindow(cfg)
 				glyph.ZIndex = 15
 			end
 		end
-		local lbl = Text(btn, name, 12, true, "FontDim")
+		local lbl = Text(btn, name, 13, true, "FontDim")
 		lbl.TextXAlignment = useIcon and Enum.TextXAlignment.Left or Enum.TextXAlignment.Center
 		lbl.AnchorPoint = Vector2.new(0, 0.5); lbl.Position = UDim2.new(0, useIcon and 30 or 6, 0.5, 0); lbl.Size = UDim2.new(1, -(useIcon and 36 or 12), 0, 16); lbl.ZIndex = 15
-		local bar = Create("Frame", { AnchorPoint = Vector2.new(0.5, 1), Size = UDim2.new(0, 0, 0, 2), Position = UDim2.new(0.5, 0, 1, -1), BorderSizePixel = 0, ZIndex = 16, Parent = btn })
+		local bar = Create("Frame", { AnchorPoint = Vector2.new(0.5, 1), Size = UDim2.new(0, 0, 0, 2), Position = UDim2.new(0.5, 0, 1, -2), BorderSizePixel = 0, ZIndex = 16, Parent = btn })
 		Corner(bar, 1); Library:AddToRegistry(bar, { BackgroundColor3 = "Accent" })
 		Press(btn, 0.97)
-		btn.MouseEnter:Connect(function() if window.ActiveTab ~= tab then Tween(lbl, { TextColor3 = Library.Theme.Font }, 0.1) Tween(btn, { BackgroundTransparency = 0.6 }, 0.1) end end)
+		btn.MouseEnter:Connect(function() if window.ActiveTab ~= tab then Tween(lbl, { TextColor3 = Library.Theme.Font }, 0.1) Tween(btn, { BackgroundTransparency = 0.97 }, 0.1) end end)
 		btn.MouseLeave:Connect(function() if window.ActiveTab ~= tab then Tween(lbl, { TextColor3 = Library.Theme.FontDim }, 0.1) Tween(btn, { BackgroundTransparency = 1 }, 0.14) end end)
 		tab._btn, tab._glyph, tab._label, tab._bar = btn, glyph, lbl, bar
 		task.defer(fitTabs)
@@ -906,8 +907,8 @@ function Library:CreateWindow(cfg)
 				Tween(pageScale, { Scale = 1 }, 0.22, Enum.EasingStyle.Quint)
 			end
 			Tween(self._label, { TextColor3 = Library.Theme.Font }, 0.12)
-			Tween(self._btn, { BackgroundTransparency = 0 }, 0.12)
-			Tween(self._bar, { Size = UDim2.new(0.5, 0, 0, 2) }, 0.22, Enum.EasingStyle.Quint)
+			Tween(self._btn, { BackgroundTransparency = 0.93 }, 0.12)
+			Tween(self._bar, { Size = UDim2.new(0, 18, 0, 2) }, 0.22, Enum.EasingStyle.Quint)
 			if self._glyph then
 				if self._glyph:IsA("ImageLabel") then Tween(self._glyph, { ImageColor3 = Library.Theme.Accent }, 0.12) else SetIconKey(self._glyph, "Accent") end
 			end
@@ -1136,15 +1137,27 @@ function GroupboxMethods:AddLabel(text, wrap)
 end
 
 function GroupboxMethods:AddDivider(label)
-	local f = row(self, label and 18 or 10, true)
-	local line = Create("Frame", { AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.new(1, 0, 0, 1), Position = UDim2.new(0, 0, 0.5, 0), BackgroundTransparency = 0.5, BorderSizePixel = 0, ZIndex = 5, Parent = f })
-	Library:AddToRegistry(line, { BackgroundColor3 = "Outline" })
-	Create("UIGradient", { Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0), NumberSequenceKeypoint.new(1, 1) }), Parent = line })
-	if label then
-		local cap = Create("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.new(0, 0, 0, 16), AutomaticSize = Enum.AutomaticSize.X, Position = UDim2.new(0.5, 0, 0.5, 0), ZIndex = 6, Parent = f })
-		Library:AddToRegistry(cap, { BackgroundColor3 = "Main" }); Pad(cap, 8, 8, 0, 0)
-		local t = Text(cap, string.upper(label), 9, true, "FontDim"); t.AutomaticSize = Enum.AutomaticSize.X; t.Size = UDim2.new(0, 0, 1, 0); t.TextXAlignment = Enum.TextXAlignment.Center; t.ZIndex = 7
+	if not label then
+		local f = row(self, 9, true)
+		local line = Create("Frame", { AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.new(1, 0, 0, 1), Position = UDim2.new(0, 0, 0.5, 0), BackgroundTransparency = 0.5, BorderSizePixel = 0, ZIndex = 5, Parent = f })
+		Library:AddToRegistry(line, { BackgroundColor3 = "Outline" })
+		return { Frame = f }
 	end
+	local f = row(self, 26, true)
+	local t = Text(f, label, 10, true, "FontDim")
+	t.AnchorPoint = Vector2.new(0, 1); t.Position = UDim2.new(0, 0, 1, -2); t.Size = UDim2.new(0, 0, 0, 12); t.AutomaticSize = Enum.AutomaticSize.X; t.ZIndex = 6
+	local line = Create("Frame", { AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.new(1, -(#label * 6 + 10), 0, 1), Position = UDim2.new(0, #label * 6 + 10, 1, -8), BackgroundTransparency = 0.35, BorderSizePixel = 0, ZIndex = 5, Parent = f })
+	Library:AddToRegistry(line, { BackgroundColor3 = "Outline" })
+	Create("UIGradient", { Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 1) }), Parent = line })
+	local function place()
+		local w = t.TextBounds.X
+		if w > 0 then
+			line.Position = UDim2.new(0, w + 10, 1, -8)
+			line.Size = UDim2.new(1, -(w + 10), 0, 1)
+		end
+	end
+	t:GetPropertyChangedSignal("TextBounds"):Connect(place)
+	task.defer(place)
 	return { Frame = f }
 end
 
@@ -1332,7 +1345,7 @@ end
 
 function GroupboxMethods:AddDropdown(idx, cfg)
 	cfg = cfg or {}
-	local f = row(self, 28, true)
+	local f = row(self, 26, true)
 	local btn = Create("TextButton", { Size = UDim2.new(1, 0, 1, 0), Text = "", AutoButtonColor = false, ZIndex = 5, Parent = f })
 	Library:AddToRegistry(btn, { BackgroundColor3 = "Element" }); Corner(btn, 8); local bstroke = Stroke(btn, "Outline"); Hover(btn, "Element", "ElementHover")
 	local l = Text(btn, cfg.Text or idx, 11, false, "FontDim")
