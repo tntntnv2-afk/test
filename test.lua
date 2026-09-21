@@ -649,11 +649,33 @@ function Library:CreateWindow(cfg)
 	local tabList = Create("ScrollingFrame", { Size = UDim2.new(1, -36, 0, LIST_H), Position = UDim2.new(0, 24, 0, LIST_Y + 18), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 0, ScrollingDirection = Enum.ScrollingDirection.Y, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), ElasticBehavior = Enum.ElasticBehavior.Never, ClipsDescendants = true, ZIndex = 12, Parent = rail })
 	local railList = Create("Frame", { Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, ZIndex = 12, Parent = tabList })
 	Create("UIListLayout", { Padding = UDim.new(0, TAB_PAD), SortOrder = Enum.SortOrder.LayoutOrder, Parent = railList })
-	local selFill = Create("Frame", { Size = UDim2.new(1, 0, 0, TAB_H), Position = UDim2.new(0, 0, 0, 0), Visible = false, ZIndex = 13, Parent = tabList })
-	self:AddToRegistry(selFill, { BackgroundColor3 = "Main" }); Corner(selFill, 8)
-	local selEdge = Create("UIStroke", { Thickness = 1, Transparency = 0.2, Parent = selFill })
-	self:AddToRegistry(selEdge, { Color = "Outline" })
 	local downBtn, downCh = arrow(LIST_Y + 18 + LIST_H + 2, 0)
+	do
+		local top = LIST_Y - 8
+		local height = (LIST_Y + 18 + LIST_H + 2 + 16 + 8) - top
+		local panel = Create("Frame", { Size = UDim2.new(1, -32, 0, height), Position = UDim2.new(0, 20, 0, top), BackgroundTransparency = 1, ZIndex = 11, Parent = rail })
+		Corner(panel, 12)
+		local base = Create("UIStroke", { Thickness = 1, Transparency = 0.35, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = panel })
+		self:AddToRegistry(base, { Color = "Outline" })
+		local function glowStroke(thick, transp)
+			local st = Create("UIStroke", { Thickness = thick, Transparency = transp, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = panel })
+			self:AddToRegistry(st, { Color = "Accent" })
+			return Create("UIGradient", { Transparency = NumberSequence.new({
+				NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.36, 1),
+				NumberSequenceKeypoint.new(0.5, 0), NumberSequenceKeypoint.new(0.64, 1),
+				NumberSequenceKeypoint.new(1, 1) }), Parent = st })
+		end
+		local core = glowStroke(1.5, 0)
+		local haze = glowStroke(4, 0.72)
+		task.spawn(function()
+			local rot = 0
+			while not Library.Unloaded and core.Parent do
+				local dt = task.wait(0.03)
+				rot = (rot + 55 * (dt or 0.03)) % 360
+				core.Rotation, haze.Rotation = rot, rot
+			end
+		end)
+	end
 	local function maxScroll() return math.max(0, tabList.AbsoluteCanvasSize.Y - tabList.AbsoluteSize.Y) end
 	local function refreshArrows()
 		local y, my = tabList.CanvasPosition.Y, maxScroll()
@@ -932,14 +954,6 @@ function Library:CreateWindow(cfg)
 			end
 			Tween(self._label, { TextColor3 = Library.Theme.Font }, 0.12)
 			if self._idx then Tween(self._idx, { TextColor3 = Library.Theme.Accent, TextTransparency = 0 }, 0.12) end
-			do
-				local btn0 = self._btn
-				task.defer(function()
-					local y = btn0.AbsolutePosition.Y - railList.AbsolutePosition.Y
-					if not selFill.Visible then selFill.Visible = true selFill.Position = UDim2.new(0, 0, 0, y) end
-					Tween(selFill, { Position = UDim2.new(0, 0, 0, y) }, 0.22, Enum.EasingStyle.Quint)
-				end)
-			end
 			if self._glyph then
 				if self._glyph:IsA("ImageLabel") then Tween(self._glyph, { ImageColor3 = Library.Theme.Accent }, 0.12) else SetIconKey(self._glyph, "Accent") end
 			end
